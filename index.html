@@ -144,11 +144,8 @@
   }
   .hero .medallion{
     width:176px; height:176px; margin:0 auto 26px;
-    border-radius:50%;
-    background: radial-gradient(circle at 35% 30%, #fff 0%, var(--blush) 60%, var(--blush-2) 100%);
     display:flex; align-items:center; justify-content:center;
-    box-shadow: var(--shadow);
-    border:1px solid rgba(201,166,107,0.4);
+    filter: drop-shadow(0 16px 30px rgba(166,91,107,0.22));
   }
   .hero .eyebrow{display:block; margin-bottom:14px;}
   .hero h1{font-size:clamp(40px,8vw,66px); line-height:1.05;}
@@ -661,40 +658,27 @@
 
 <script>
   // ---------- Cover open ----------
-  <!-- document.getElementById('cover').addEventListener('click', function(){ -->
-    <!-- this.classList.add('open'); -->
-    <!-- document.body.style.overflow='auto'; -->
-    <!-- // Start background music on this same user gesture (required by browsers) -->
-    <!-- if (typeof audioEl !== 'undefined' && !playing) { -->
-      <!-- audioEl.play().then(()=>{ -->
-        <!-- playing = true; -->
-        <!-- musicBtn.classList.add('spinning'); -->
-      <!-- }).catch((err)=>{ -->
-        <!-- console.log('Autoplay on open was blocked, use the music button instead:', err); -->
-      <!-- }); -->
-    <!-- } -->
-  <!-- }); -->
   const cover = document.getElementById('cover');
 
-function openInvitation() {
+  function openInvitation() {
+    if (cover.classList.contains('open')) return;
     cover.classList.add('open');
     document.body.style.overflow = 'auto';
 
     if (typeof audioEl !== 'undefined' && !playing) {
-        audioEl.play()
-            .then(() => {
-                playing = true;
-                musicBtn.classList.add('spinning');
-            })
-            .catch(err => {
-                console.log('Autoplay blocked:', err);
-            });
+      audioEl.play()
+        .then(() => {
+          playing = true;
+          musicBtn.classList.add('spinning');
+        })
+        .catch(err => {
+          console.log('Autoplay blocked, guest can use the music button instead:', err);
+        });
     }
-}
+  }
 
-cover.addEventListener('click', openInvitation);
-cover.addEventListener('touchstart', openInvitation, { passive: true });
-  document.body.style.overflow='hidden';
+  cover.addEventListener('click', openInvitation);
+  document.body.style.overflow = 'hidden';
 
   // ---------- Ambient petals ----------
   (function(){
@@ -764,21 +748,14 @@ cover.addEventListener('touchstart', openInvitation, { passive: true });
     }
   });
 
-  // ---------- RSVP + persistent storage ----------
+  // ---------- RSVP ----------
+  // 1. Set up the free Google Apps Script backend (see setup guide provided separately).
+  // 2. Paste the Web App URL you get from deploying it below, replacing YOUR_SCRIPT_URL_HERE.
+  const RSVP_ENDPOINT = "YOUR_SCRIPT_URL_HERE";
+
   const rsvpForm = document.getElementById('rsvpForm');
   const thankYouModal = document.getElementById('thankYouModal');
   const rsvpCountEl = document.getElementById('rsvpCount');
-
-  async function refreshRsvpCount(){
-    try{
-      const list = await window.storage.list('rsvp:', true);
-      const count = (list && list.keys) ? list.keys.length : 0;
-      rsvpCountEl.textContent = count > 0 ? (count + ' guest' + (count>1?'s have':' has') + ' RSVP\'d so far 💐') : '';
-    }catch(err){
-      // storage not available; fail silently
-    }
-  }
-  refreshRsvpCount();
 
   rsvpForm.addEventListener('submit', async function(e){
     e.preventDefault();
@@ -790,15 +767,27 @@ cover.addEventListener('touchstart', openInvitation, { passive: true });
       message: document.getElementById('rsvpMessage').value,
       submittedAt: new Date().toISOString()
     };
-    try{
-      const id = 'rsvp:' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
-      await window.storage.set(id, JSON.stringify(entry), true);
-    }catch(err){
-      console.log('Storage unavailable, RSVP not persisted:', err);
+
+    if (RSVP_ENDPOINT && RSVP_ENDPOINT !== "https://script.google.com/macros/s/AKfycbxuEA-PWBybrG3FePdjCa6LjNKl66IR0mIAWkys-GljiNbmrdgNczOQtL2pqWU6saaZ/exec") {
+      try {
+        // Apps Script Web Apps don't return CORS headers, so we use no-cors:
+        // the request still reaches the script and gets processed, we just
+        // can't read the response back here.
+        await fetch(RSVP_ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry)
+        });
+      } catch (err) {
+        console.log('RSVP submission error:', err);
+      }
+    } else {
+      console.log('RSVP_ENDPOINT not configured yet — this submission was not sent anywhere.');
     }
+
     thankYouModal.classList.add('show');
     rsvpForm.reset();
-    refreshRsvpCount();
   });
 
   document.getElementById('closeThankYou').addEventListener('click', function(){
