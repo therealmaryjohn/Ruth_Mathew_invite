@@ -484,7 +484,7 @@
 <!-- PEOPLE -->
 <section class="people">
   <h2 class="reveal">With Love &amp; Blessings</h2>
-  <p class="section-sub reveal">Guided by her parents and embraced in faith by her godparents</p>
+  <p class="section-sub reveal">Lovingly guided by her parents and embraced in faith by her godparents</p>
   <div class="people-grid">
     <div class="people-card reveal">
       <svg class="role-icon" viewBox="0 0 40 40" fill="none"><path d="M20 6c-5 4-8 9-8 15 0 6 3.5 10 8 12 4.5-2 8-6 8-12 0-6-3-11-8-15Z" fill="#F1D2D8" stroke="#D48A98"/></svg>
@@ -756,9 +756,19 @@
   const rsvpForm = document.getElementById('rsvpForm');
   const thankYouModal = document.getElementById('thankYouModal');
   const rsvpCountEl = document.getElementById('rsvpCount');
+  const rsvpSubmitBtn = rsvpForm.querySelector('.submit-btn');
+  let rsvpSubmitting = false;
 
   rsvpForm.addEventListener('submit', async function(e){
     e.preventDefault();
+
+    // Guard against double-clicks / double-taps firing two submissions
+    if (rsvpSubmitting) return;
+    rsvpSubmitting = true;
+    rsvpSubmitBtn.disabled = true;
+    const originalBtnText = rsvpSubmitBtn.textContent;
+    rsvpSubmitBtn.textContent = 'Submitting...';
+
     const entry = {
       name: document.getElementById('rsvpName').value,
       phone: document.getElementById('rsvpPhone').value,
@@ -788,6 +798,10 @@
 
     thankYouModal.classList.add('show');
     rsvpForm.reset();
+
+    // Keep it disabled — one RSVP per page load is enough, and this fully
+    // prevents any repeat-click/tap from creating duplicate rows.
+    rsvpSubmitBtn.textContent = 'RSVP Received ✓';
   });
 
   document.getElementById('closeThankYou').addEventListener('click', function(){
